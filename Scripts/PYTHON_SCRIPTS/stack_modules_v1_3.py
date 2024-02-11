@@ -2,7 +2,7 @@
 
 # Modules
 import os, time, subprocess, psutil, gzip, tarfile, smtplib
-import shutil
+import shutil, boto3, botocore
 import sys as i
 import shutil as c
 import cx_Oracle as cx
@@ -106,6 +106,7 @@ def DB_Connection(**kwargs):
 
 
 
+
 # Primary Functions
 def Backup(**kwargs):
     DB_Connection(OP_ID=4, OP_NAME="File/Directory_Copy", OP_TYPE="Backup", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
@@ -147,6 +148,15 @@ def Backup(**kwargs):
         DB_Connection(OP_ID=4, OP_NAME="File/Directory_Copy", OP_TYPE="Backup", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="ERROR")
         raise ValueError("Backup Failed")
 
+
+def aws_create_user(**kwargs):
+    try:
+        iam = boto3.client(service_name=kwargs["Service"])
+        re = iam.create_user(UserName=kwargs["User"])
+        #print(re)
+        print_colored_text(text="Success!", color_code=GREEN)
+    except Exception as error:
+        print_colored_text(text=error, color_code=RED)
 
 def UnGzip(**kwargs):
     print_colored_text(text="Unzipping {}!".format(kwargs["Absolute_Path"]), color_code=YELLOW)
@@ -387,6 +397,10 @@ functions = {
     "StackEmail": {
         "function": STACK_EMAIL,
         "args": ["SUBJECT", "BODY", "TO_EMAIL"]
+    },
+    "aws_create_user": {
+        "function": aws_create_user,
+        "args": ["Service", "User"]
     },
     "DatabaseMigration": {
         "function": Database_Migration,
