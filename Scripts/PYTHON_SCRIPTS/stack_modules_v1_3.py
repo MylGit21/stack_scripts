@@ -158,22 +158,23 @@ def aws_create_user(**kwargs):
         iam = boto3.client(service_name=kwargs["Service"])
         re = iam.create_user(UserName=kwargs["User"])
         print_colored_text(text="Success!", color_code=GREEN)
+        return kwargs["User"]  # Return the created user name
     except ClientError as error:
         print_colored_text(text=error.response, color_code=RED)
         if error.response["Error"]["Code"] == "EntityAlreadyExists":
-            print("User already exists..Use the same user?")
+            print("User already exists.. Use the same user?")
             val = input("Enter (y or n): ")
             if val == 'y':
                 print("You want to use the same user")
-                pass
+                return kwargs["User"]
             else:
                 print("You want to create a new user")
                 new_user = input("Enter username: ")
                 response = iam.create_user(UserName=new_user)
-                print(response)
-    else:
-        print("Unexpected error occurred while creating user")
-        raise ValueError("user could not be created")
+                print_colored_text(text="Success!", color_code=GREEN)
+                return new_user
+        else:
+            raise ValueError("Unexpected error occurred while creating user")
 
 
 def aws_create_group(**kwargs):
@@ -217,16 +218,24 @@ def aws_create_group(**kwargs):
             print_colored_text(text=error.response, color_code=RED)
             raise ValueError("Unexpected error occurred while creating group")
 
-    except ClientError as error:
-        if error.response["Error"]["Code"] == "NoSuchEntity":
-            # Group doesn't exist, create it
-            response = iam.create_group(GroupName=group_name)
-            print(response)
-            print_colored_text(text="Success!", color_code=GREEN)
 
-        else:
-            print_colored_text(text=error.response, color_code=RED)
-            raise ValueError("Unexpected error occurred while creating group")
+def aws_attach_user_group(**kwargs):
+    try:
+        iam = boto3.client(service_name=kwargs["Service"])
+        user_name = aws_create_user(Service=kwargs["Service"], User=kwargs["User"])
+        group_name = kwargs["Group"]
+
+        # Attach the user to the group
+        iam.add_user_to_group(GroupName=group_name, UserName=user_name)
+        print_colored_text(text="User '{}' attached to group '{}'.".format(user_name,group_name), color_code=GREEN)
+
+        # Set up login profile for the user
+        pswrd = input("Enter password for user '{}': ".format(user_name))
+        iam.create_login_profile(UserName=user_name, Password=pswrd)
+        print_colored_text(text="Login profile created for user '{}'.".format(user_name), color_code=GREEN)
+
+    except ClientError as error:
+        print_colored_text(text="Error: {}".format(error.response['Error']['Message']), color_code=RED)
 
 
 def UnGzip(**kwargs):
@@ -477,6 +486,10 @@ functions = {
     "aws_create_group": {
         "function": aws_create_group,
         "args": ["Service", "Group"]
+    },
+    "aws_attach_user_group": {
+        "function": aws_attach_user_group,
+        "args": ["Service", "Group", "User"]
     },
     "DatabaseMigration": {
         "function": Database_Migration,
