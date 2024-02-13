@@ -1,13 +1,19 @@
 #!/usr/bin/python
 
+
 # Modules
-import os, time, subprocess, psutil, gzip, tarfile, smtplib
-import shutil, boto3, botocore
-import sys as i
-import shutil as c
+import boto3
+import gzip
+import os
+import psutil
+import smtplib
+import subprocess
+import tarfile
+import time
+import shutil as s
 import cx_Oracle as cx
-from datetime import datetime
 from pathlib import Path
+from botocore.exceptions import ClientError
 
 # Variables
 RED = "\033[91m"
@@ -66,7 +72,7 @@ def list_files_in_directory(**kwargs):
 
 
 def DB_Connection(**kwargs):
-    #print(kwargs)
+    # print(kwargs)
     connection = cx.connect(user="STACK_MYL_SEP23", password="stackinc", dsn="MKIT-DEV-OEM/APEXDB")
     print_colored_text(text="Connection Version: {}".format(connection.version), color_code=YELLOW)
 
@@ -105,8 +111,6 @@ def DB_Connection(**kwargs):
     connection.commit()
 
 
-
-
 # Primary Functions
 def Backup(**kwargs):
     DB_Connection(OP_ID=4, OP_NAME="File/Directory_Copy", OP_TYPE="Backup", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
@@ -119,12 +123,12 @@ def Backup(**kwargs):
 
         # if src is a directory then copytree
         if os.path.isdir(kwargs["Source"]):
-            c.copytree(kwargs["Source"], os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
+            s.copytree(kwargs["Source"], os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
             print_colored_text(
                 text="Successfully copied {} to {}!".format(kwargs["Source"] + TS, kwargs["Destination"]),
                 color_code=GREEN)
         else:
-            c.copy(kwargs["Source"], os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
+            s.copy(kwargs["Source"], os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
             print_colored_text(
                 text="Successfully copied {} to {}!".format(kwargs["Source"] + TS, kwargs["Destination"]),
                 color_code=GREEN)
@@ -138,7 +142,7 @@ def Backup(**kwargs):
             if os.path.isfile(kwargs["Source"]):
                 os.remove(os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
             elif os.path.isdir(kwargs["Source"]):
-                shutil.rmtree(os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
+                s.rmtree(os.path.join(kwargs["Destination"], kwargs["Source"] + TS))
 
         # list new files in directory
         list_files_in_directory(directory=kwargs["Destination"])
@@ -153,10 +157,77 @@ def aws_create_user(**kwargs):
     try:
         iam = boto3.client(service_name=kwargs["Service"])
         re = iam.create_user(UserName=kwargs["User"])
-        #print(re)
         print_colored_text(text="Success!", color_code=GREEN)
-    except Exception as error:
-        print_colored_text(text=error, color_code=RED)
+    except ClientError as error:
+        print_colored_text(text=error.response, color_code=RED)
+        if error.response["Error"]["Code"] == "EntityAlreadyExists":
+            print("User already exists..Use the same user?")
+            val = input("Enter (y or n): ")
+            if val == 'y':
+                print("You want to use the same user")
+                pass
+            else:
+                print("You want to create a new user")
+                new_user = input("Enter username: ")
+                response = iam.create_user(UserName=new_user)
+                print(response)
+    else:
+        print("Unexpected error occurred while creating user")
+        raise ValueError("user could not be created")
+
+
+def aws_create_group(**kwargs):
+    admin_policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+    try:
+        iam = boto3.client(service_name=kwargs["Service"])
+        group_name = kwargs["Group"]
+
+        # Check if the group already exists
+        iam.get_group(GroupName=group_name)
+
+        print_colored_text(text="Group '{}' already exists.".format(group_name), color_code=RED)
+        print("Do you want to use the same group?")
+        val = input("Enter (y or n): ")
+        if val.lower() == 'y':
+            print("You want to use the same group")
+            pass
+        else:
+            print("You want to create a new group")
+            new_group = input("Enter group name: ")
+            response = iam.create_group(GroupName=new_group)
+            print(response)
+            print_colored_text(text="Success!", color_code=GREEN)
+
+        # Attach the admin policy to the group
+        iam.attach_group_policy(GroupName=group_name, PolicyArn=admin_policy_arn)
+        print_colored_text(text="Admin policy attached to the group '{}'.".format(group_name), color_code=YELLOW)
+
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "NoSuchEntity":
+            # Group doesn't exist, create it
+            response = iam.create_group(GroupName=group_name)
+            print(response)
+            print_colored_text(text="Success!", color_code=GREEN)
+
+            # Attach the admin policy to the newly created group
+            iam.attach_group_policy(GroupName=group_name, PolicyArn=admin_policy_arn)
+            print_colored_text(text="Admin policy attached to the group '{}'.".format(group_name), color_code=YELLOW)
+
+        else:
+            print_colored_text(text=error.response, color_code=RED)
+            raise ValueError("Unexpected error occurred while creating group")
+
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "NoSuchEntity":
+            # Group doesn't exist, create it
+            response = iam.create_group(GroupName=group_name)
+            print(response)
+            print_colored_text(text="Success!", color_code=GREEN)
+
+        else:
+            print_colored_text(text=error.response, color_code=RED)
+            raise ValueError("Unexpected error occurred while creating group")
+
 
 def UnGzip(**kwargs):
     print_colored_text(text="Unzipping {}!".format(kwargs["Absolute_Path"]), color_code=YELLOW)
@@ -166,6 +237,7 @@ def UnGzip(**kwargs):
         tar.close
     except:
         print("Could not unzip file")
+
     dmpfiletest = os.path.splitext(kwargs["Absolute_Path"])[0]
     dmpfile = (os.path.basename(kwargs["Absolute_Path"]))
     print(dmpfile)
@@ -207,7 +279,7 @@ def SmartDiskMonitor(**kwargs):
         if os.path.isfile("/home/oracle/scripts/practicedir_myl_sep23/Python/logstop.txt"):
             print_colored_text(text="{} is back under threshold!".format(kwargs["Disk"]), color_code=GREEN)
             break
-            time.sleep(5)
+        time.sleep(5)
 
         # Alert if over 90%
         if int(usage_percent) > 90:
@@ -354,7 +426,7 @@ def Database_Migration(**kwargs):
         print(impor_content)
 
         # Copying unzipped dump file
-        shutil.copy(dumpfile_path, dest_dump_path)
+        s.copy(dumpfile_path, dest_dump_path)
 
         os.popen("chmod 700 {}".format(impor_content))
         os.popen("{}".format(impor_content))
@@ -401,6 +473,10 @@ functions = {
     "aws_create_user": {
         "function": aws_create_user,
         "args": ["Service", "User"]
+    },
+    "aws_create_group": {
+        "function": aws_create_group,
+        "args": ["Service", "Group"]
     },
     "DatabaseMigration": {
         "function": Database_Migration,
