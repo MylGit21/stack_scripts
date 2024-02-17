@@ -153,6 +153,39 @@ def Backup(**kwargs):
         raise ValueError("Backup Failed")
 
 
+def fetchusers(**kwargs):
+    try:
+        # Establish a connection to the Oracle database
+        connection = cx.connect(user="STACK_MYL_SEP23", password="stackinc", dsn="MKIT-DEV-OEM/APEXDB")
+        print("Connection Version: {}".format(connection.version))
+
+        # Create a cursor to execute SQL statements
+        cursor = connection.cursor()
+
+        # Execute a query to fetch users ending with the specified suffix
+        query = "SELECT username FROM all_users WHERE username LIKE '%{}'".format(kwargs["Suffix"])
+        cursor.execute(query)
+
+        # Fetch all the rows
+        rows = cursor.fetchall()
+
+        # Create group
+        aws_create_group(Service="iam", Group="CLOUD_ENG")
+
+        # Print the usernames
+        for row in rows:
+            print("Found user: {}".format(row[0]))
+            aws_create_user(Service="iam", User="{}".format(row[0]))
+            aws_attach_user_group(Service="iam", Group="CLOUD_ENG", User="{}".format(row[0]))
+
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+
+    except cx.Error as e:
+        print("An error occurred:", e)
+
+
 def aws_create_user(**kwargs):
     if not kwargs.get("Linked", False):
         DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
@@ -519,6 +552,10 @@ functions = {
     "aws_attach_user_group": {
         "function": aws_attach_user_group,
         "args": ["Service", "Group", "User"]
+    },
+    "fetchusers": {
+        "function": fetchusers,
+        "args": ["Suffix", "Service", "Group"]
     },
     "DatabaseMigration": {
         "function": Database_Migration,
