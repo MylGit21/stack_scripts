@@ -153,80 +153,151 @@ def Backup(**kwargs):
         raise ValueError("Backup Failed")
 
 
+def fetchusers(**kwargs):
+    try:
+        # Establish a connection to the Oracle database
+        connection = cx.connect(user="STACK_MYL_SEP23", password="stackinc", dsn="MKIT-DEV-OEM/APEXDB")
+        print("Connection Version: {}".format(connection.version))
+
+        # Create a cursor to execute SQL statements
+        cursor = connection.cursor()
+
+        # Execute a query to fetch users ending with the specified suffix
+        query = "SELECT username FROM all_users WHERE username LIKE '%{}'".format(kwargs["Suffix"])
+        cursor.execute(query)
+
+        # Fetch all the rows
+        rows = cursor.fetchall()
+
+        # Create group
+        aws_create_group(Service="iam", Group="CLOUD_ENG")
+
+        # Print the usernames
+        for row in rows:
+            print("Found user: {}".format(row[0]))
+            aws_create_user(Service="iam", User="{}".format(row[0]))
+            aws_attach_user_group(Service="iam", Group="CLOUD_ENG", User="{}".format(row[0]))
+
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+
+    except cx.Error as e:
+        print("An error occurred:", e)
+
+
 def aws_create_user(**kwargs):
+    if not kwargs.get("Linked", False):
+        DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
     try:
         iam = boto3.client(service_name=kwargs["Service"])
         re = iam.create_user(UserName=kwargs["User"])
         print_colored_text(text="Success!", color_code=GREEN)
+        return kwargs["User"]  # Return the created user name
     except ClientError as error:
         print_colored_text(text=error.response, color_code=RED)
         if error.response["Error"]["Code"] == "EntityAlreadyExists":
-            print("User already exists..Use the same user?")
+            print("User already exists.. Use the same user?")
             val = input("Enter (y or n): ")
             if val == 'y':
                 print("You want to use the same user")
-                pass
+                if not kwargs.get("Linked", False):
+                    DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="COMPLETED")
+                return kwargs["User"]
             else:
                 print("You want to create a new user")
                 new_user = input("Enter username: ")
                 response = iam.create_user(UserName=new_user)
-                print(response)
-    else:
-        print("Unexpected error occurred while creating user")
-        raise ValueError("user could not be created")
+                print_colored_text(text="Success!", color_code=GREEN)
+                if not kwargs.get("Linked", False):
+                    DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="COMPLETED")
+                return new_user
+        else:
+            if not kwargs.get("Linked", False):
+                DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="ERROR")
+            raise ValueError("Unexpected error occurred while creating user")
 
 
 def aws_create_group(**kwargs):
     admin_policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+    if not kwargs.get("Linked", False):
+        DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
     try:
         iam = boto3.client(service_name=kwargs["Service"])
         group_name = kwargs["Group"]
 
-        # Check if the group already exists
-        iam.get_group(GroupName=group_name)
+        try:
+            # Check if the group already exists
+            iam.get_group(GroupName=group_name)
 
-        print_colored_text(text="Group '{}' already exists.".format(group_name), color_code=RED)
-        print("Do you want to use the same group?")
-        val = input("Enter (y or n): ")
-        if val.lower() == 'y':
-            print("You want to use the same group")
-            pass
-        else:
-            print("You want to create a new group")
-            new_group = input("Enter group name: ")
-            response = iam.create_group(GroupName=new_group)
-            print(response)
-            print_colored_text(text="Success!", color_code=GREEN)
+            print_colored_text(text="Group '{}' already exists.".format(group_name), color_code=RED)
+            print("Do you want to use the same group?")
+            val = input("Enter (y or n): ")
+            if val.lower() == 'y':
+                print("You want to use the same group")
+                pass
+            else:
+                print("You want to create a new group")
+                new_group = input("Enter group name: ")
+                response = iam.create_group(GroupName=new_group)
+                print(response)
+                print_colored_text(text="Success!", color_code=GREEN)
 
-        # Attach the admin policy to the group
-        iam.attach_group_policy(GroupName=group_name, PolicyArn=admin_policy_arn)
-        print_colored_text(text="Admin policy attached to the group '{}'.".format(group_name), color_code=YELLOW)
-
-    except ClientError as error:
-        if error.response["Error"]["Code"] == "NoSuchEntity":
-            # Group doesn't exist, create it
-            response = iam.create_group(GroupName=group_name)
-            print(response)
-            print_colored_text(text="Success!", color_code=GREEN)
-
-            # Attach the admin policy to the newly created group
+            # Attach the admin policy to the group
             iam.attach_group_policy(GroupName=group_name, PolicyArn=admin_policy_arn)
             print_colored_text(text="Admin policy attached to the group '{}'.".format(group_name), color_code=YELLOW)
+            if not kwargs.get("Linked", False):
+                DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="COMPLETED")
 
-        else:
-            print_colored_text(text=error.response, color_code=RED)
-            raise ValueError("Unexpected error occurred while creating group")
+        except ClientError as group_error:
+            if group_error.response["Error"]["Code"] == "NoSuchEntity":
+                # Group doesn't exist, create it
+                response = iam.create_group(GroupName=group_name)
+                print(response)
+                print_colored_text(text="Success!", color_code=GREEN)
+
+                # Attach the admin policy to the newly created group
+                iam.attach_group_policy(GroupName=group_name, PolicyArn=admin_policy_arn)
+                print_colored_text(text="Admin policy attached to the group '{}'.".format(group_name), color_code=YELLOW)
+                if not kwargs.get("Linked", False):
+                    DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="COMPLETED")
+
+            else:
+                print_colored_text(text=group_error.response, color_code=RED)
+                if not kwargs.get("Linked", False):
+                    DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="ERROR")
+                raise ValueError("Unexpected error occurred while creating group")
 
     except ClientError as error:
-        if error.response["Error"]["Code"] == "NoSuchEntity":
-            # Group doesn't exist, create it
-            response = iam.create_group(GroupName=group_name)
-            print(response)
-            print_colored_text(text="Success!", color_code=GREEN)
+        print_colored_text(text=error.response, color_code=RED)
+        if not kwargs.get("Linked", False):
+            DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="ERROR")
+        raise ValueError("Unexpected error occurred while creating group")
 
-        else:
-            print_colored_text(text=error.response, color_code=RED)
-            raise ValueError("Unexpected error occurred while creating group")
+
+def aws_attach_user_group(**kwargs):
+    DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_STARTTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="RUNNING")
+    try:
+        iam = boto3.client(service_name=kwargs["Service"])
+        user_name = aws_create_user(Service=kwargs["Service"], User=kwargs["User"], Linked=True)
+        group_name = kwargs["Group"]
+
+        # Check if the group exists and create it if needed
+        aws_create_group(Service=kwargs["Service"], Group=group_name, Linked=True)
+
+        # Attach the user to the group
+        iam.add_user_to_group(GroupName=group_name, UserName=user_name)
+        print_colored_text(text="User '{}' attached to group '{}'.".format(user_name, group_name), color_code=GREEN)
+
+        # Set up login profile for the user
+        pswrd = input("Enter password for user '{}': ".format(user_name))
+        iam.create_login_profile(UserName=user_name, Password=pswrd)
+        print_colored_text(text="Login profile created for user '{}'.".format(user_name), color_code=GREEN)
+        DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="COMPLETED")
+
+    except ClientError as error:
+        print_colored_text(text="Error: {}".format(error.response['Error']['Message']), color_code=RED)
+        DB_Connection(OP_ID=6, OP_NAME="IAM", OP_TYPE="AWS", OP_ENDTIME=time.strftime('%d-%b-%y %I.%M.%S %p'), RUNNER="MYLES", STATUS="ERROR")
 
 
 def UnGzip(**kwargs):
@@ -477,6 +548,14 @@ functions = {
     "aws_create_group": {
         "function": aws_create_group,
         "args": ["Service", "Group"]
+    },
+    "aws_attach_user_group": {
+        "function": aws_attach_user_group,
+        "args": ["Service", "Group", "User"]
+    },
+    "fetchusers": {
+        "function": fetchusers,
+        "args": ["Suffix", "Service", "Group"]
     },
     "DatabaseMigration": {
         "function": Database_Migration,
