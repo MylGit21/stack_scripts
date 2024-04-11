@@ -16,38 +16,45 @@ argus = len(i.argv) - 1
 # Main Code
 def main():
     while True:
-        s.print_colored_text(text="Available functions:", color_code=s.YELLOW)
-        for func_name, info in s.functions.items():
-            arg_names = ", ".join(info["args"])
-            print("- {} ({})".format(func_name, arg_names))
-        s.print_colored_text(text="\nEnter 'exit' to quit", color_code=s.YELLOW)
+        s.print_colored_text(text="Available functions:", color_code=s.BLUE)
+         
+        for category, functions_in_category in s.functions.items():
+            s.print_colored_text(text="\n{}:".format(category), color_code=s.YELLOW)
+            
+            for function_name, info in functions_in_category.items():
+                arg_names = ", ".join(info["args"])
+                print("- {} ({})".format(function_name, arg_names))
 
         function_name = input("\nEnter the function name to execute: ")
 
-        if function_name == 'exit':
+        if function_name == "exit":
             break
+    
+        selected_function_info = None
+        for functions_in_category in s.functions.values():
+            selected_function_info = functions_in_category.get(function_name)
+            if selected_function_info:
+                break
 
-        selected_function_info = s.functions.get(function_name)
         if selected_function_info:
             selected_function = selected_function_info['function']
             args_info = selected_function_info['args']
 
             if args_info:
-                args = {}
+                kwargs = {}
                 s.print_colored_text(text="\nArguments for {}:".format(function_name), color_code=s.YELLOW)
                 for arg_name in args_info:
                     arg = input("Enter {}: ".format(arg_name))
-                    args[arg_name] = arg
-                #try:
-                print(*args)
-                selected_function(**args)
-                '''s.STACK_EMAIL(SUBJECT="{} Success!".format(selected_function),
-                                  BODY="This email is to let you know your function ran with no errors!",
-                                  TO_EMAIL="stackcloud11@mkitconsulting.net", COLOR=s.GREEN)
+                    kwargs[arg_name] = arg
+                try:
+                    selected_function(**kwargs)
+                    s.STACK_EMAIL(SUBJECT="{} Success!".format(selected_function),
+                                BODY="This email is to let you know your function ran with no errors!",
+                                TO_EMAIL="stackcloud11@mkitconsulting.net", COLOR=s.GREEN)
                 except:
                     s.STACK_EMAIL(SUBJECT="{} Failure!".format(selected_function),
-                                  BODY="This email is to let you know your function ran with errors!",
-                                  TO_EMAIL="stackcloud11@mkitconsulting.net", COLOR=s.RED)'''
+                                BODY="This email is to let you know your function ran with errors!",
+                                TO_EMAIL="stackcloud11@mkitconsulting.net", COLOR=s.RED)
                 break
             else:
                 selected_function()
