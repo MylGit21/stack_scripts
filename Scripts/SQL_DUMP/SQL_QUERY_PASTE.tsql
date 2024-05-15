@@ -1,0 +1,219 @@
+TEMPORARY PASTE BOX
+
+insert into address
+values(4,005,'15 LeRoad ave', 20342, 'MD', 'USA');
+commit;
+
+
+select a.f_name, a.l_name, b.street_add, b.zip
+from customer a
+FULL JOIN address b
+on a.cust_id = b.cust_id;
+
+
+create table customer2 as select a.f_name, a.l_name, b.street_add, b.zip
+from customer a
+RIGHT JOIN address b
+on a.cust_id = b.cust_id;
+
+FULL JOIN
+
+create table STORES
+(
+	STORE_ID number,
+	STORE_NAME varchar2(15),
+	STORE_REGION varchar2(10),
+	STORE_ADDRESS varchar2(20)
+);
+
+alter table STORES add constraint Store_Id_fk primary key (STORE_ID);
+
+create table PRODUCTS
+(
+	STORE_ID number,
+	PRODUCT_ID number,
+	ITEM varchar2(15),
+	ITEM_CREATION_DATE date,
+	ITEM_DESCRIPTION varchar2(20),
+	ITEM_EXPIRATION_DATE date
+);
+
+alter table PRODUCTS add constraint Product_Id_fk foreign key (STORE_ID) references STORES(STORE_ID);
+
+alter table STORES
+add STORE_ACCOUNT varchar2(15);
+add STORE_MANAGER varchar2(15);
+add STORE_OPEN_DATE date;
+add PRODUCT_AMOUNT number;
+
+alter table PRODUCTS
+drop column ITEM_CREATION_DATE;
+
+alter table PRODUCTS
+add PRODUCT_AMOUNT number;
+
+insert into STORES values
+[(1, 'TARGET', 'SW', '10 Minnesota Lane', 098765, 'Dennis Decker', '02-JAN-2017', 0);]
+(1, 'GIANT', 'SW', '10 Minnesota Lane', 098765, 'Dennis Decker', '02-JAN-2017', 0);
+(2, 'KROGER', 'NW', '12 600TH STREET', 349809, 'Scott Smart', '06-APR-2016', 0);
+(3, 'TESCO', 'NE', '13 EBINPEJO LANE', 982344, 'Phil Jackson', '07-SEP-2015', 0);
+(4, 'WALMART', 'NE', '16 AWOLOWO RD', 346312, 'Atwuan Jamison', '08-MAR-2014', 0);
+(5, 'THOMAS PINK', 'SE', '23 ANTHEM GREENFIELDS DR', 012539, 'Michael Smith', 0, '09-AUG-2012', 0);
+commit;
+
+alter table products
+modify item_description varchar2(30);
+
+insert into PRODUCTS values
+(1, 0, 'BATTERIES', 'DURACELL BATTERIES', '25-DEC-2021', 300);
+insert into PRODUCTS values
+(2, 1, 'TORCH LIGHT', 'ALL WEATHER TORCH LIGHT', NULL, 500);
+insert into PRODUCTS values
+(3, 2, 'EGGS', 'FARM RAISED CHICKEN EGGS', '23-MAY-2017', 600);
+insert into PRODUCTS values
+(4, 3, 'EGGS', 'FARM RAISED CHICKEN EGGS', '23-MAY-2017', 600);
+insert into PRODUCTS values
+(5, 4, 'BUTTER', '100% FAT FREE BUTTER', '11-JUNE-2018', 800);
+insert into PRODUCTS values
+(5, 5, 'PRUNE JUICE', 'REFRESHING PRUNE JUICE', '31-MAR-2018', 250);
+insert into PRODUCTS values
+(5, 6, 'PLEATHER COUCH', 'MOST COMFORTABLE COUCH EVER', NULL, 4000);
+insert into PRODUCTS values
+(5, 7, 'SHIRT', 'BEST SHIRTS EVER',NULL, 275);
+
+delete from Stores
+where Store_id = 4;
+
+delete from Products
+where Store_id = 4;
+
+create index Product_Id_idx on Products (product_id);
+
+delete from Products
+where Store_id in (2,3);
+
+delete from Stores
+where Store_id in (2,3);
+
+select *
+from Stores a
+FULL JOIN Products b
+on a.Store_Id = b.Store_Id;
+
+select a.STORE_NAME, a.STORE_REGION, b.ITEM, b.ITEM_EXPIRATION_DATE, b.ITEM_DESCRIPTION
+from Stores a
+RIGHT JOIN Products b
+on a.Store_Id = b.Store_Id;
+
+select MAX (ITEM_EXPIRATION_DATE) from PRODUCTS;
+
+select MIN (ITEM_EXPIRATION_DATE) from PRODUCTS;
+
+select SUM (PRODUCT_AMOUNT) from PRODUCTS;
+
+select COUNT(*) "Products" from PRODUCTS;
+
+ALTER TABLE Stores
+ADD CHECK (store_name IN ('GIANT', 'KROEGER', 'THOMAS PINK', 'TESCO', 'WALMART'));
+
+alter table Products add constraint Product_Idx_fk primary key (PRODUCT_ID);
+
+create table TRAINING_CLASS
+(
+	CLASS_ID varchar2(5),
+	COMPANY_NAME varchar2(15),
+	COMPANY_REGION varchar2(10),
+	COMPANY_ADDRESS varchar2(45)
+);
+
+create table HOME_WORK
+(
+	CLASS_ID varchar2(5),
+	STUDENT_ID varchar2(15),
+	FNAME varchar2(15),
+	LNAME varchar2(15),
+	GENDER varchar2(1),
+	TRAINING_COMPANY varchar2(20)
+);
+
+alter table HOME_WORK
+add HW_NAME varchar2(15);
+add DUE_DATE date;
+
+alter table HOME_WORK
+drop column DUE_DATE;
+
+alter table training_class
+modify company_name varchar2(30);
+
+insert into TRAINING_CLASS values
+('1','Stack_it_solutions', 'NE', '3705 Endicott Place Springdale Maryland');
+insert into TRAINING_CLASS values
+('2', 'Mkit_inc', 'NE', '13201 Anthem Greenfields Dr. Bowie Maryland');
+insert into TRAINING_CLASS values
+('1','Stack_it_solution''s', 'NE', '3705 Endicott Place Springdale Maryland');
+insert into TRAINING_CLASS values
+('4','Not_so_good_IT', 'NE', '318 Parkdale dr. Glenarden Maryland');
+
+
+insert into HOME_WORK values
+('1','20','Den', 'Manny', 'M', 'Stack_it_solutions', 'DBA', 'SQL HOME WORK');
+('11','21','Floyd', 'Danson', 'M', 'Stack_it_solutions', 'DBA', 'SQL HOME WORK')
+('14','22', 'Madey', 'Bado', 'M', 'Stack_it_solutions', 'DBA', 'SQL HOME WORK')
+('14','23','Tari', 'Baba', 'M', 'Stack_it_solutions', 'DBA', 'SQL HOME WORK')
+('11','24','Awon', 'folks', 'M', 'Stack_it_solutions', 'DBA', 'SQL HOME WORK')
+
+alter table HOME_WORK add (temp number);
+update Home_work set temp = to_number(class_id)
+alter table home_work drop column class_id;
+alter table home_work rename column temp to class_id
+
+alter table home_work
+add due_date date;
+
+update home_work
+set due_date = '31-JAN-2024';
+
+desc STACK_TEMP.PROD_OPERATIONS
+
+create table PROD_OPERATIONS
+(
+	OP_ID number,
+	OP_NAME varchar2(30),
+	OP_TYPE varchar2(30),
+	MONITORING_EMAIL varchar2(30)
+);
+
+create table PROD_ACTIVITIES
+(
+	OP_ID number,
+	OP_STARTTIME timestamp(6),
+	OP_ENDTIME timestamp(6),
+	RUNNER varchar2(30),
+	STATUS varchar2(30),
+	MON_EMAIL varchar2(30)
+);
+
+alter table PROD_ACTIVITIES
+modify MON_EMAIL varchar2(31);
+
+insert into PROD_OPERATIONS values
+(1, 'Export', 'Backup', 'stackcloud10@mkitconsulting.net');
+(2, 'Import', 'Backup', 'stackcloud10@mkitconsulting.net');
+(3, 'Data_Migration', 'Migration', 'stackcloud10@mkitconsulting.net');
+(4, 'File_Directory_Copy', 'Backup', 'stackcloud10@mkitconsulting.net');
+(5, 'Disk_Monitoring', 'Monitoring', 'stackcloud10@mkitconsulting.net');
+
+alter table PROD_OPERATIONS add constraint op_id_fk primary key (OP_ID);
+
+alter table PROD_ACTIVITIES add constraint op_idlink_fk foreign key (OP_ID) references PROD_OPERATIONS(OP_ID);
+
+select * from prod_activities;
+
+delete * from prod_activities;
+
+
+SELECT a.OP_STARTTIME, a.OP_ENDTIME, a.OP_ID, a.RUNNER, b.OP_TYPE, b.OP_NAME
+FROM PROD_ACTIVITIES a
+JOIN PROD_OPERATIONS b ON a.OP_ID = b.OP_ID
+WHERE a.RUNNER = 'MYLES' AND b.OP_TYPE = 'AWS';
