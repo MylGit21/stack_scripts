@@ -1,0 +1,123 @@
+[SQL ORACLE COMMANDS]
+
+[CREATE TABLES WITHIN DATABASE DICTIONARY CONTAINING VARIABLE(fname) AND VARIABLETYPE(varchar2) USING CREATE]
+create table TableName
+(
+	fname varchar2(10)
+);
+
+
+[DESCRIBE/DISPLAY DICTIONARY]
+desc TableName;
+
+
+[REMOVE TABLES WITHIN DATABASE DICTIONARY USING DROP]
+drop table TableName;
+
+
+[DISPLAY TABLES(*) WITHIN DATABASE DICTIONARY(tab) USING SELECT]
+select * from tab;
+
+
+[DISPLAY TABLE(*) WITHIN DATABASE DICTIONARY USING SELECT]
+select * from TableName;
+
+
+[VIEW LAST LINE COMMAND]
+1
+
+
+[RERUN LAST RAN COMMAND]
+r
+
+
+[REMOVE ALL COLLUMNS FROM TABLE USING DELETE]
+delete from TableName;
+
+
+[REMOVE SPECIFIC COLLUMN BY FILTERING VALUE(cust_id) USING DELETE & WHERE]
+delete from TableName
+where Value = 3;
+
+
+[ADD VALUE(cust_id) AND TYPE(number) TO TABLE USING ALTER]
+alter table TableName
+add cust_id number;
+
+
+[SET VALUE(cust_id) FOR VALUE(fname) USING ]
+update TableName
+set cust_id = 1
+where fname = 'MIKE';
+commit;
+
+
+[RENAME TABLE USING ALTER]
+alter table TableName
+rename to NewTableName;
+
+
+[ADD VALUE USING INSERT]
+insert into TableName
+values('ValueName');
+commit;
+
+
+[ADD VALUE(nick) AND SET FIRST VALUE(3) USING INSERT]
+insert into TableName
+values('NICK',3);
+commit;
+
+
+[DISPLAY SPECIFIC COLLUMN(*) BY FILTERING VALUE(cust_id) USING SELECT]
+select * from TableName
+where cust_id = 3;
+
+
+[CHANGE SPECIFIC COLLUMN(fname) BY FILTERING VALUE(cust_id) USING UPDATE]
+update TableName
+set fname = 'Value'
+where cust_id = 1;
+commit;
+
+
+[ADD PRIMARY KEY CONSTRAINT FOR TABLE ON VALUE USING ALTER]
+alter table TableName add constraint ConstraintName_fk primary key (ValueName);
+
+
+[ADD FOREIGN KEY CONSTRAINT FOR TABLE ON VALUE REFRENCING TABLE(PrimaryTable) USING ALTER]
+alter table TableName add constraint ConstraintName_fk foreign key (value) references PrimaryTable(value);
+
+
+[REMOVE KEY CONSTRAINT FOR TABLE REFERENCING CONSTRAINT NAME USING ALTER]
+alter table TableName drop constraint ConstraintName;
+
+
+[ADD INDEX FOR TABLE TO SCAN FOR VARIABLE USING CREATE]
+create index IndexName_id_idx on TableName (RefrenceVariable);
+
+
+[DELETE INDEX FOR TABLE USING REMOVE]
+remove index IndexName_id_idx;
+
+
+[DISPLAY JOINED SPECIFIC VALUES REFERENCED BY MULTIPLE TABLES(a,b) USING SELECT]
+select a.ValueName1, a.ValueName2, b.ValueName3, b.ValueName4
+from TableName1 a
+JOIN TableName2 b
+on a.LinkingValue = b.LinkingValue;
+[You can add 'left', 'right', 'inner' or 'full' before join to display data that isn't intersecting]
+
+[DISPLAY TABLE FROM ANOTHER SCHEMA USING SELECT]
+select * from STACK_TEMP.PROD_OPERATIONS;
+
+[CHANGE TABLE ROW VALUE TYPE USING ALTER AND MODIFY]
+alter table TableName
+modify ValueName ValueType;
+
+[ADD MULTIPLE CHECK LIMITATIONS FOR TABLE ROW VALUE USING ALTER]
+alter table TableName
+add CHECK (ValueName IN ('AcceptableOption3', 'AcceptableOption2', 'AcceptableOption1'));
+
+[VIEW DATABASE DATA DICTIONARY USING SELECT ]
+select constraint_name, constraint_type from all_constraint where table_name = 'STORES' and owner = 'STACK_MYL_SEP23';
